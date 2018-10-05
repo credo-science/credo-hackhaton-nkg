@@ -1,10 +1,7 @@
-import os
 import pathlib
-from math import degrees
+import sys
 
 import ccdproc
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from astropy import units as u
@@ -14,12 +11,87 @@ from astropy.nddata import CCDData
 
 from astropy.io import fits
 from astropy.stats import gaussian_fwhm_to_sigma
-from astropy.visualization import ImageNormalize, SqrtStretch
-from photutils import detect_sources, detect_threshold, source_properties, deblend_sources, EllipticalAperture
-from scipy.misc import imrotate
+from photutils import detect_sources, detect_threshold, source_properties, deblend_sources
 
-image_file2 = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/SC79282.fits'
-image_file = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/SC79283.fits'
+# For change: ==================================================================
+image_dir = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/'
+output_dir = '/tmp/credo/'
+# WARNING! all paths to the dirs must be ended by '/'
+
+files = [
+['SC79282.fits',
+'SC79283.fits',
+'SC79284.fits',
+'SC79285.fits',
+'SC79286.fits',
+'SC79287.fits',
+'SC79288.fits',
+'SC79289.fits',
+'SC79288.fits'],
+
+['SC79423.fits',
+'SC79424.fits',
+'SC79425.fits',
+'SC79426.fits',
+'SC79427.fits',
+'SC79428.fits',
+'SC79429.fits',
+'SC79430.fits',
+'SC79431.fits',
+'SC79432.fits',
+'SC79433.fits',
+'SC79432.fits'],
+
+['SC79583.fits',
+'SC79584.fits',
+'SC79585.fits',
+'SC79586.fits',
+'SC79587.fits',
+'SC79588.fits',
+'SC79589.fits',
+'SC79590.fits',
+'SC79591.fits',
+'SC79590.fits']
+]
+
+
+darks = [
+
+ #'SC79297.fits',
+'SC79298.fits',
+'SC79299.fits',
+'SC79300.fits',
+'SC79301.fits',
+'SC79302.fits',
+'SC79303.fits',
+'SC79304.fits',
+'SC79305.fits',
+'SC79306.fits',
+'SC79305.fits',
+
+'SC79401.fits',
+'SC79402.fits',
+'SC79403.fits',
+'SC79404.fits',
+'SC79405.fits',
+'SC79406.fits',
+'SC79405.fits',
+
+'SC79494.fits',
+'SC79495.fits',
+'SC79496.fits',
+'SC79497.fits',
+'SC79498.fits',
+'SC79499.fits',
+'SC79498.fits',
+]
+# end for change ======================================================
+
+metadata = [
+    'OBJECT',
+    'AZIMUTH',
+    'ALTITUDE'
+]
 
 
 def save_as_png(img, thr1, thr2, png):
@@ -39,14 +111,66 @@ def save_as_png(img, thr1, thr2, png):
     img.save(png)
 
 
-def filter(out_filter, out_marked, out_dir, in1, in2, desc):
+def filtering(in1, in2, out_filter):
 
     image = CCDData.read(in1, unit="adu")
     #save_as_png(image.data, 800, 1200, '/tmp/a.png')
 
     dark = CCDData.read(in2, unit="adu")
 
-    dark_sub = ccdproc.subtract_dark(image, dark, dark_exposure=240*u.second, data_exposure=240*u.second)
+    image_exposure = image.header.get('EXPTIME')
+    dark_exposure = image.header.get('EXPTIME')
+
+    dark_sub = ccdproc.subtract_dark(image, dark, dark_exposure=image_exposure*u.second, data_exposure=dark_exposure*u.second)
+
+    hdu = fits.open(in1)
+    hdu[0].data = dark_sub
+    #hdu.header['telescop'] = 'CREDO'
+    hdu.writeto(out_filter, overwrite=True)
+    hdu.close()
+
+    return dark_sub
+
+
+def analyse_groups(groups_connections):
+    adj = {}
+
+    # add relations
+    for k in groups_connections.keys():
+        for f in groups_connections[k]:
+            v = adj.get(k, [])
+            v.append(f)
+            adj[k] = v
+
+            v = adj.get(f, [])
+            v.append(k)
+            adj[f] = v
+
+    # counting
+    visited = set()
+
+    def counting(v):
+        count = 1
+        visited.add(v)
+        for f in adj.get(v, []):
+            if f not in visited:
+                count += counting(f)
+        return count
+
+    existing_groups = 0
+    new_groups = 1
+    for k in groups_connections.keys():
+        if k not in visited:
+            existing_groups += 1
+            new_groups *= counting(k)
+
+    if existing_groups == 1:
+        new_groups = 0
+
+    return existing_groups, {}
+
+
+def find_hits(out_filter, out_marked, out_dir, in1, dark_sub, desc):
 
     sigma = 3.0 * gaussian_fwhm_to_sigma  # FWHM = 3.
     kernel = Gaussian2DKernel(sigma, x_size=3, y_size=3)
@@ -55,16 +179,20 @@ def filter(out_filter, out_marked, out_dir, in1, in2, desc):
     segm = detect_sources(dark_sub, threshold, npixels=5, filter_kernel=kernel)
 
     hdu = fits.open(in1)
-    hdu[0].data = dark_sub
-    #hdu.header['telescop'] = 'CREDO'
-    hdu.writeto(out_filter, overwrite=True)
+
+    exposure = hdu[0].header.get('EXPTIME')
+    shot_time = hdu[0].header.get('DATE-OBS')
+    others = []
+    for i in metadata:
+        others.append(hdu[0].header.get(i))
+
     hdu.close()
 
-    hdu = fits.open(in1)
-    hdu[0].data = segm
+    #hdu = fits.open(in1)
+    #hdu[0].data = segm
     #hdu.header['telescop'] = 'CREDO'
-    hdu.writeto(out_marked, overwrite=True)
-    hdu.close()
+    #hdu.writeto(out_marked, overwrite=True)
+    #hdu.close()
 
     thr1 = np.percentile(dark_sub, 25)
     #thr2 = np.max(dark_sub)
@@ -90,6 +218,7 @@ def filter(out_filter, out_marked, out_dir, in1, in2, desc):
     worm_area = 0
     group_area = 0
 
+    groups_connections = {}
 
     for obj in cat:
         position = (obj.xcentroid.value, obj.ycentroid.value)
@@ -127,10 +256,13 @@ def filter(out_filter, out_marked, out_dir, in1, in2, desc):
             xx = i.xcentroid.value
             yy = i.ycentroid.value
             if pow(xx - x, 2) + pow(yy - y, 2) < pow(30, 2) and i.id != obj.id:
-                group = True
-                group_area += obj.area.value
-                group_count += 1
-                break
+                if not group:
+                    group = True
+                    group_area += obj.area.value
+                    group_count += 1
+                gc = groups_connections.get(obj.id, [])
+                gc.append(i.id)
+                groups_connections[obj.id] = gc
 
         suffix = "-%s-%s-%.3f-%.3f-%.3f.png" % (clsasse, 'g' if group else 'n', obj.ellipticity.value, obj.elongation.value, obj.eccentricity.value)
 
@@ -149,87 +281,34 @@ def filter(out_filter, out_marked, out_dir, in1, in2, desc):
         #theta = obj.orientation.value
         #print("x: %d, y: %d" % (int(position[0]), int(position[1])))
         #apertures.append(EllipticalAperture(position, a, b, theta=theta))
+    groups_count, groups_assigns = analyse_groups(groups_connections)
+
     count = dots_count + comet_count + worm_count
     area = dots_area + comet_area + worm_area
-    print('%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d' % (desc, dots_count, dots_area, comet_count, comet_area, worm_count, worm_area, count, area, group_count, group_area))
+    meta = '\t'.join(map(str, others))
+    print('%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%s\t# %s' % (desc, dots_count, dots_area, comet_count, comet_area, worm_count, worm_area, count, area, group_count, group_area, groups_count, exposure, shot_time, meta))
 
 
-files = [
-['SC79282.fits',
-'SC79283.fits',
-'SC79284.fits',
-'SC79285.fits',
-'SC79286.fits',
-'SC79287.fits',
-'SC79288.fits',
-'SC79289.fits',
-'SC79288.fits'],
+ads = '\t'.join(metadata)
+print('# file\tdots count\tdots area\tcomet count\tcomet area\tworms count\tworms area\tsum count\tsum area\tgroup count\tgroup area\tgroups count\texposure\tdate\t# %s' % ads)
 
-# ['SC79297.fits',
-# 'SC79298.fits',
-# 'SC79299.fits',
-# 'SC79300.fits',
-# 'SC79301.fits',
-# 'SC79302.fits',
-# 'SC79303.fits',
-# 'SC79304.fits',
-# 'SC79305.fits',
-# 'SC79306.fits',
-# 'SC79305.fits'],
-
-# ['SC79401.fits',
-# 'SC79402.fits',
-# 'SC79403.fits',
-# 'SC79404.fits',
-# 'SC79405.fits',
-# 'SC79406.fits',
-# 'SC79405.fits'],
-
-['SC79423.fits',
-'SC79424.fits',
-'SC79425.fits',
-'SC79426.fits',
-'SC79427.fits',
-'SC79428.fits',
-'SC79429.fits',
-'SC79430.fits',
-'SC79431.fits',
-'SC79432.fits',
-'SC79433.fits',
-'SC79432.fits'],
-#
-# ['SC79494.fits',
-# 'SC79495.fits',
-# 'SC79496.fits',
-# 'SC79497.fits',
-# 'SC79498.fits',
-# 'SC79499.fits',
-# 'SC79498.fits'],
-
-['SC79583.fits',
-'SC79584.fits',
-'SC79585.fits',
-'SC79586.fits',
-'SC79587.fits',
-'SC79588.fits',
-'SC79589.fits',
-'SC79590.fits',
-'SC79591.fits',
-'SC79590.fits']
-]
-
-#image_file2 = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/SC79282.fits'
-#image_file = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/SC79283.fits'
-image_dir = '/home/nkg/no_backup/projects/pk/credo/hackhaton/Dark frames/'
-
-print('#file\tdots count\tdots area\tcomet count\tcomet area\tworms count\tworms area\tsum count\tsum area\tgroup count\tgroup area')
-
-pathlib.Path('/tmp/credo/detections/').mkdir(parents=True, exist_ok=True)
+pathlib.Path(output_dir + 'detections/').mkdir(parents=True, exist_ok=True)
 for g in files:
     for i in range(0, len(g) - 1):
-        fn = g[i]
-        dir = '/tmp/credo/detections/' + fn + "/"
-        pathlib.Path(dir + "class/").mkdir(parents=True, exist_ok=True)
-        filter('/tmp/credo/cleared-' + fn, '/tmp/credo/marked-' + fn, dir, image_dir + fn, image_dir + g[i+1], fn)
+        try:
+            fn = g[i]
+            dir = output_dir + 'detections/' + fn + "/"
+            pathlib.Path(dir + "class/").mkdir(parents=True, exist_ok=True)
+            filtered = filtering(image_dir + fn, image_dir + g[i+1], output_dir + 'cleared-' + fn)
+            find_hits(output_dir + 'cleared-' + fn, output_dir + 'marked-' + fn, dir, image_dir + fn, filtered, fn)
+        except Exception as e:
+            print(e, file=sys.stderr)
 
-#filter('/tmp/credo/cleared.fits', '/tmp/credo/marked.fits', '/tmp/credo/detections', image_file, image_file2)
+for fn in darks:
+    try:
+        dir = output_dir + 'detections/' + fn + "/"
+        pathlib.Path(dir + "class/").mkdir(parents=True, exist_ok=True)
+        filtered = CCDData.read(image_dir + fn, unit="adu")
+        find_hits(output_dir + 'cleared-' + fn, output_dir + 'marked-' + fn, dir, image_dir + fn, filtered, fn)
+    except Exception as e:
+        print(e, file=sys.stderr)
