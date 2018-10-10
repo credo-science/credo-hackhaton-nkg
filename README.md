@@ -85,24 +85,24 @@ Download full output from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/
 
 ### Samples from source and output
 
-SC79423 source image:
+SC79423 source image:\
 ![SC79423](samples/source/SC79423.png)
 
-SC79423 after hot pixel removal:
+SC79423 after hot pixel removal:\
 ![SC79423](samples/output/cleared-S78423.png)
 
 
-SC79424 source image:
+SC79424 source image:\
 ![SC79424](samples/source/SC79424.png)
 
-SC79424 after hot pixel removal:
+SC79424 after hot pixel removal:\
 ![SC79424](samples/output/cleared-S78424.png)
 
 
-SC79425 source image:
+SC79425 source image:\
 ![SC79425](samples/source/SC79425.png)
 
-SC79425 after hot pixel removal:
+SC79425 after hot pixel removal:\
 ![SC79425](samples/output/cleared-S78425.png)
 
 
