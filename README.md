@@ -79,9 +79,9 @@ In `output_dir` you get:
 
 ## Sample result
 
-Download full source input from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/Dark_frames-20181003T144152Z-001.zip)
+Download full source input from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/Dark_frames-20181003T144152Z-001.zip), compressed by zip.
 
-Download full output from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/credo.tar.xz)
+Download full output from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/credo.tar.xz), compresesed by xz and tar.
 
 ### Samples from source and output
 
