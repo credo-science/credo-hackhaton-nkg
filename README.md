@@ -76,3 +76,44 @@ In `output_dir` you get:
    `f` - eccentricity,
    * `./{a}-{b}-{c}-{d}-{e}-{f}.png` - PNG export of above from `cleared-{file_from_files_or_darks}.png`,
 * `detections/{file_from_files_or_darks}/classes/{a}-{b}-{c}-{d}-{e}-{f}.png` - marked area by *find_hits* function.
+
+## Sample result
+
+Download full source input from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/Dark_frames-20181003T144152Z-001.zip)
+
+Download full output from [here](http://mars.iti.pk.edu.pl/~nkg/credo/hackathon/credo.tar.xz)
+
+### Samples from source and output
+
+SC79423 source image:
+![SC79423](samples/source/SC79423.png)
+
+SC79423 after hot pixel removal:
+![SC79423](samples/output/cleared-S78423.png)
+
+
+SC79424 source image:
+![SC79424](samples/source/SC79424.png)
+
+SC79424 after hot pixel removal:
+![SC79424](samples/output/cleared-S78424.png)
+
+
+SC79425 source image:
+![SC79425](samples/source/SC79425.png)
+
+SC79425 after hot pixel removal:
+![SC79425](samples/output/cleared-S78425.png)
+
+
+#### Samples of extracts hits:
+![SC79423](samples/output/S78423-hit1.png)
+![SC79423](samples/output/S78423-hit2.png)
+![SC79424](samples/output/S78424-hit1.png)
+![SC79424](samples/output/S78424-hit2.png)
+![SC79424](samples/output/S78424-hit3.png)
+![SC79425](samples/output/S78425-hit1.png)
+![SC79425](samples/output/S78425-hit2.png)
+
+Michał Niedźwiecki, MSc.\
+Cracow University of Technology, Poland, 2018-10-05
